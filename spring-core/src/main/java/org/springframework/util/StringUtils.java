@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -209,14 +209,18 @@ public abstract class StringUtils {
 			return str;
 		}
 
-		StringBuilder sb = new StringBuilder(str);
-		while (sb.length() > 0 && Character.isWhitespace(sb.charAt(0))) {
-			sb.deleteCharAt(0);
+		int beginIndex = 0;
+		int endIndex = str.length() - 1;
+
+		while (beginIndex <= endIndex && Character.isWhitespace(str.charAt(beginIndex))) {
+			beginIndex++;
 		}
-		while (sb.length() > 0 && Character.isWhitespace(sb.charAt(sb.length() - 1))) {
-			sb.deleteCharAt(sb.length() - 1);
+
+		while (endIndex > beginIndex && Character.isWhitespace(str.charAt(endIndex))) {
+			endIndex--;
 		}
-		return sb.toString();
+
+		return str.substring(beginIndex, endIndex + 1);
 	}
 
 	/**
@@ -638,11 +642,11 @@ public abstract class StringUtils {
 		// first path element. This is necessary to correctly parse paths like
 		// "file:core/../core/io/Resource.class", where the ".." should just
 		// strip the first "core" directory while keeping the "file:" prefix.
-		int prefixIndex = pathToUse.indexOf(":");
+		int prefixIndex = pathToUse.indexOf(':');
 		String prefix = "";
 		if (prefixIndex != -1) {
 			prefix = pathToUse.substring(0, prefixIndex + 1);
-			if (prefix.contains("/")) {
+			if (prefix.contains(FOLDER_SEPARATOR)) {
 				prefix = "";
 			}
 			else {
@@ -655,7 +659,7 @@ public abstract class StringUtils {
 		}
 
 		String[] pathArray = delimitedListToStringArray(pathToUse, FOLDER_SEPARATOR);
-		List<String> pathElements = new LinkedList<>();
+		LinkedList<String> pathElements = new LinkedList<>();
 		int tops = 0;
 
 		for (int i = pathArray.length - 1; i >= 0; i--) {
@@ -682,6 +686,10 @@ public abstract class StringUtils {
 		// Remaining top paths need to be retained.
 		for (int i = 0; i < tops; i++) {
 			pathElements.add(0, TOP_PATH);
+		}
+		// If nothing else left, at least explicitly point to current path.
+		if (pathElements.size() == 1 && "".equals(pathElements.getLast()) && !prefix.endsWith(FOLDER_SEPARATOR)) {
+			pathElements.add(0, CURRENT_PATH);
 		}
 
 		return prefix + collectionToDelimitedString(pathElements, FOLDER_SEPARATOR);
@@ -748,25 +756,61 @@ public abstract class StringUtils {
 	}
 
 	/**
-	 * Parse the given {@code localeString} value into a {@link Locale}.
-	 * <p>This is the inverse operation of {@link Locale#toString Locale's toString}.
-	 * @param localeString the locale {@code String}, following {@code Locale's}
-	 * {@code toString()} format ("en", "en_UK", etc);
-	 * also accepts spaces as separators, as an alternative to underscores
+	 * Parse the given {@code String} value into a {@link Locale}, accepting
+	 * the {@link Locale#toString} format as well as BCP 47 language tags.
+	 * @param localeValue the locale value: following either {@code Locale's}
+	 * {@code toString()} format ("en", "en_UK", etc), also accepting spaces as
+	 * separators (as an alternative to underscores), or BCP 47 (e.g. "en-UK")
+	 * as specified by {@link Locale#forLanguageTag} on Java 7+
+	 * @return a corresponding {@code Locale} instance, or {@code null} if none
+	 * @throws IllegalArgumentException in case of an invalid locale specification
+	 * @since 5.0.4
+	 * @see #parseLocaleString
+	 * @see Locale#forLanguageTag
+	 */
+	@Nullable
+	public static Locale parseLocale(String localeValue) {
+		String[] tokens = tokenizeLocaleSource(localeValue);
+		if (tokens.length == 1) {
+			validateLocalePart(localeValue);
+			Locale resolved = Locale.forLanguageTag(localeValue);
+			return (resolved.getLanguage().length() > 0 ? resolved : null);
+		}
+		return parseLocaleTokens(localeValue, tokens);
+	}
+
+	/**
+	 * Parse the given {@code String} representation into a {@link Locale}.
+	 * <p>For many parsing scenarios, this is an inverse operation of
+	 * {@link Locale#toString Locale's toString}, in a lenient sense.
+	 * This method does not aim for strict {@code Locale} design compliance;
+	 * it is rather specifically tailored for typical Spring parsing needs.
+	 * <p><b>Note: This delegate does not accept the BCP 47 language tag format.
+	 * Please use {@link #parseLocale} for lenient parsing of both formats.</b>
+	 * @param localeString the locale {@code String}: following {@code Locale's}
+	 * {@code toString()} format ("en", "en_UK", etc), also accepting spaces as
+	 * separators (as an alternative to underscores)
 	 * @return a corresponding {@code Locale} instance, or {@code null} if none
 	 * @throws IllegalArgumentException in case of an invalid locale specification
 	 */
 	@Nullable
 	public static Locale parseLocaleString(String localeString) {
-		String[] parts = tokenizeToStringArray(localeString, "_ ", false, false);
-		String language = (parts.length > 0 ? parts[0] : "");
-		String country = (parts.length > 1 ? parts[1] : "");
+		return parseLocaleTokens(localeString, tokenizeLocaleSource(localeString));
+	}
 
+	private static String[] tokenizeLocaleSource(String localeSource) {
+		return tokenizeToStringArray(localeSource, "_ ", false, false);
+	}
+
+	@Nullable
+	private static Locale parseLocaleTokens(String localeString, String[] tokens) {
+		String language = (tokens.length > 0 ? tokens[0] : "");
+		String country = (tokens.length > 1 ? tokens[1] : "");
 		validateLocalePart(language);
 		validateLocalePart(country);
 
 		String variant = "";
-		if (parts.length > 2) {
+		if (tokens.length > 2) {
 			// There is definitely a variant, and it is everything after the country
 			// code sans the separator between the country code and the variant.
 			int endIndexOfCountryCode = localeString.indexOf(country, language.length()) + country.length();
@@ -776,13 +820,19 @@ public abstract class StringUtils {
 				variant = trimLeadingCharacter(variant, '_');
 			}
 		}
+
+		if ("".equals(variant) && country.startsWith("#")) {
+			variant = country;
+			country = "";
+		}
+
 		return (language.length() > 0 ? new Locale(language, country, variant) : null);
 	}
 
 	private static void validateLocalePart(String localePart) {
 		for (int i = 0; i < localePart.length(); i++) {
 			char ch = localePart.charAt(i);
-			if (ch != ' ' && ch != '_' && ch != '#' && !Character.isLetterOrDigit(ch)) {
+			if (ch != ' ' && ch != '_' && ch != '-' && ch != '#' && !Character.isLetterOrDigit(ch)) {
 				throw new IllegalArgumentException(
 						"Locale part \"" + localePart + "\" contains invalid characters");
 			}
@@ -794,7 +844,9 @@ public abstract class StringUtils {
 	 * as used for the HTTP "Accept-Language" header.
 	 * @param locale the Locale to transform to a language tag
 	 * @return the RFC 3066 compliant language tag as {@code String}
+	 * @deprecated as of 5.0.4, in favor of {@link Locale#toLanguageTag()}
 	 */
+	@Deprecated
 	public static String toLanguageTag(Locale locale) {
 		return locale.getLanguage() + (hasText(locale.getCountry()) ? "-" + locale.getCountry() : "");
 	}
@@ -871,7 +923,10 @@ public abstract class StringUtils {
 	 * @param array1 the first array (can be {@code null})
 	 * @param array2 the second array (can be {@code null})
 	 * @return the new array ({@code null} if both given arrays were {@code null})
+	 * @deprecated as of 4.3.15, in favor of manual merging via {@link LinkedHashSet}
+	 * (with every entry included at most once, even entries within the first array)
 	 */
+	@Deprecated
 	@Nullable
 	public static String[] mergeStringArrays(@Nullable String[] array1, @Nullable String[] array2) {
 		if (ObjectUtils.isEmpty(array1)) {
@@ -912,7 +967,7 @@ public abstract class StringUtils {
 	 * @return the {@code String} array
 	 */
 	public static String[] toStringArray(Collection<String> collection) {
-		return collection.toArray(new String[collection.size()]);
+		return collection.toArray(new String[0]);
 	}
 
 	/**
@@ -922,8 +977,7 @@ public abstract class StringUtils {
 	 * @return the {@code String} array
 	 */
 	public static String[] toStringArray(Enumeration<String> enumeration) {
-		List<String> list = Collections.list(enumeration);
-		return list.toArray(new String[list.size()]);
+		return toStringArray(Collections.list(enumeration));
 	}
 
 	/**
@@ -989,10 +1043,9 @@ public abstract class StringUtils {
 
 	/**
 	 * Take an array of strings and split each element based on the given delimiter.
-	 * A {@code Properties} instance is then generated, with the left of the
-	 * delimiter providing the key, and the right of the delimiter providing the value.
-	 * <p>Will trim both the key and value before adding them to the
-	 * {@code Properties} instance.
+	 * A {@code Properties} instance is then generated, with the left of the delimiter
+	 * providing the key, and the right of the delimiter providing the value.
+	 * <p>Will trim both the key and value before adding them to the {@code Properties}.
 	 * @param array the array to process
 	 * @param delimiter to split each element using (typically the equals symbol)
 	 * @return a {@code Properties} instance representing the array contents,

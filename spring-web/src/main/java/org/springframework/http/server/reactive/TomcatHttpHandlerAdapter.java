@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 package org.springframework.http.server.reactive;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -31,6 +31,7 @@ import org.apache.catalina.connector.CoyoteOutputStream;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.util.Assert;
 
 /**
  * {@link ServletHttpHandlerAdapter} extension that uses Tomcat APIs for reading
@@ -38,9 +39,10 @@ import org.springframework.core.io.buffer.DataBufferUtils;
  *
  * @author Violeta Georgieva
  * @since 5.0
+ * @see org.springframework.web.server.adapter.AbstractReactiveWebInitializer
  */
-@WebServlet(asyncSupported = true)
 public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
+
 
 	public TomcatHttpHandlerAdapter(HttpHandler httpHandler) {
 		super(httpHandler);
@@ -48,22 +50,30 @@ public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
 
 
 	@Override
-	protected ServerHttpRequest createRequest(HttpServletRequest request, AsyncContext cxt) throws IOException {
-		return new TomcatServerHttpRequest(request, cxt, getDataBufferFactory(), getBufferSize());
+	protected ServletServerHttpRequest createRequest(HttpServletRequest request, AsyncContext asyncContext)
+			throws IOException, URISyntaxException {
+
+		Assert.notNull(getServletPath(), "servletPath is not initialized.");
+		return new TomcatServerHttpRequest(
+				request, asyncContext, getServletPath(), getDataBufferFactory(), getBufferSize());
 	}
 
 	@Override
-	protected ServerHttpResponse createResponse(HttpServletResponse response, AsyncContext cxt) throws IOException {
-		return new TomcatServerHttpResponse(response, cxt, getDataBufferFactory(), getBufferSize());
+	protected ServletServerHttpResponse createResponse(HttpServletResponse response,
+			AsyncContext asyncContext, ServletServerHttpRequest request) throws IOException {
+
+		return new TomcatServerHttpResponse(
+				response, asyncContext, getDataBufferFactory(), getBufferSize(), request);
 	}
 
 
 	private final class TomcatServerHttpRequest extends ServletServerHttpRequest {
 
 		public TomcatServerHttpRequest(HttpServletRequest request, AsyncContext context,
-				DataBufferFactory factory, int bufferSize) throws IOException {
+				String servletPath, DataBufferFactory factory, int bufferSize)
+				throws IOException, URISyntaxException {
 
-			super(request, context, factory, bufferSize);
+			super(request, context, servletPath, factory, bufferSize);
 		}
 
 		@Override
@@ -76,14 +86,15 @@ public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
 
 				ServletRequest request = getNativeRequest();
 				int read = ((CoyoteInputStream) request.getInputStream()).read(byteBuffer);
-				if (logger.isTraceEnabled()) {
-					logger.trace("read:" + read);
-				}
+				logBytesRead(read);
 
 				if (read > 0) {
 					dataBuffer.writePosition(read);
 					release = false;
 					return dataBuffer;
+				}
+				else if (read == -1) {
+					return EOF_BUFFER;
 				}
 				else {
 					return null;
@@ -101,9 +112,9 @@ public class TomcatHttpHandlerAdapter extends ServletHttpHandlerAdapter {
 	private static final class TomcatServerHttpResponse extends ServletServerHttpResponse {
 
 		public TomcatServerHttpResponse(HttpServletResponse response, AsyncContext context,
-				DataBufferFactory factory, int bufferSize) throws IOException {
+				DataBufferFactory factory, int bufferSize, ServletServerHttpRequest request) throws IOException {
 
-			super(response, context, factory, bufferSize);
+			super(response, context, factory, bufferSize, request);
 		}
 
 		@Override

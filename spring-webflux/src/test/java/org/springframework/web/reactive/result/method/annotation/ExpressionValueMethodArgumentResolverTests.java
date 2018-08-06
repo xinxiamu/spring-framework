@@ -53,10 +53,11 @@ public class ExpressionValueMethodArgumentResolverTests {
 
 
 	@Before
+	@SuppressWarnings("resource")
 	public void setup() throws Exception {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.refresh();
-		ReactiveAdapterRegistry adapterRegistry = new ReactiveAdapterRegistry();
+		ReactiveAdapterRegistry adapterRegistry = ReactiveAdapterRegistry.getSharedInstance();
 		this.resolver = new ExpressionValueMethodArgumentResolver(context.getBeanFactory(), adapterRegistry);
 
 		Method method = ReflectionUtils.findMethod(getClass(), "params", (Class<?>[]) null);

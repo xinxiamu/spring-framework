@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpRange;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.AbstractServerHttpRequest;
+import org.springframework.http.server.reactive.SslInfo;
 import org.springframework.lang.Nullable;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MimeType;
@@ -60,17 +61,22 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 	@Nullable
 	private final InetSocketAddress remoteAddress;
 
+	@Nullable
+	private final SslInfo sslInfo;
+
 	private final Flux<DataBuffer> body;
 
 
 	private MockServerHttpRequest(HttpMethod httpMethod, URI uri, @Nullable String contextPath,
 			HttpHeaders headers, MultiValueMap<String, HttpCookie> cookies,
-			@Nullable InetSocketAddress remoteAddress, Publisher<? extends DataBuffer> body) {
+			@Nullable InetSocketAddress remoteAddress, @Nullable SslInfo sslInfo,
+			Publisher<? extends DataBuffer> body) {
 
 		super(uri, contextPath, headers);
 		this.httpMethod = httpMethod;
 		this.cookies = cookies;
 		this.remoteAddress = remoteAddress;
+		this.sslInfo = sslInfo;
 		this.body = Flux.from(body);
 	}
 
@@ -89,6 +95,12 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 	@Nullable
 	public InetSocketAddress getRemoteAddress() {
 		return this.remoteAddress;
+	}
+
+	@Nullable
+	@Override
+	protected SslInfo initSslInfo() {
+		return this.sslInfo;
 	}
 
 	@Override
@@ -121,6 +133,8 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 
 	/**
 	 * Alternative to {@link #method(HttpMethod, URI)} that accepts a URI template.
+	 * The given URI may contain query parameters, or those may be added later via
+	 * {@link BaseBuilder#queryParam queryParam} builder methods.
 	 * @param method the HTTP method (GET, POST, etc)
 	 * @param urlTemplate the URL template
 	 * @param vars variables to expand into the template
@@ -132,7 +146,9 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	/**
-	 * Create an HTTP GET builder with the given url.
+	 * Create an HTTP GET builder with the given URI template. The given URI may
+	 * contain query parameters, or those may be added later via
+	 * {@link BaseBuilder#queryParam queryParam} builder methods.
 	 * @param urlTemplate a URL template; the resulting URL will be encoded
 	 * @param uriVars zero or more URI variables
 	 * @return the created builder
@@ -142,7 +158,7 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	/**
-	 * Create an HTTP HEAD builder with the given url.
+	 * HTTP HEAD variant. See {@link #get(String, Object...)} for general info.
 	 * @param urlTemplate a URL template; the resulting URL will be encoded
 	 * @param uriVars zero or more URI variables
 	 * @return the created builder
@@ -152,7 +168,7 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	/**
-	 * Create an HTTP POST builder with the given url.
+	 * HTTP POST variant. See {@link #get(String, Object...)} for general info.
 	 * @param urlTemplate a URL template; the resulting URL will be encoded
 	 * @param uriVars zero or more URI variables
 	 * @return the created builder
@@ -162,7 +178,8 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	/**
-	 * Create an HTTP PUT builder with the given url.
+	 * HTTP PUT variant. See {@link #get(String, Object...)} for general info.
+	 * {@link BaseBuilder#queryParam queryParam} builder methods.
 	 * @param urlTemplate a URL template; the resulting URL will be encoded
 	 * @param uriVars zero or more URI variables
 	 * @return the created builder
@@ -172,7 +189,7 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	/**
-	 * Create an HTTP PATCH builder with the given url.
+	 * HTTP PATCH variant. See {@link #get(String, Object...)} for general info.
 	 * @param urlTemplate a URL template; the resulting URL will be encoded
 	 * @param uriVars zero or more URI variables
 	 * @return the created builder
@@ -182,7 +199,7 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	/**
-	 * Create an HTTP DELETE builder with the given url.
+	 * HTTP DELETE variant. See {@link #get(String, Object...)} for general info.
 	 * @param urlTemplate a URL template; the resulting URL will be encoded
 	 * @param uriVars zero or more URI variables
 	 * @return the created builder
@@ -192,7 +209,7 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	/**
-	 * Creates an HTTP OPTIONS builder with the given url.
+	 * HTTP OPTIONS variant. See {@link #get(String, Object...)} for general info.
 	 * @param urlTemplate a URL template; the resulting URL will be encoded
 	 * @param uriVars zero or more URI variables
 	 * @return the created builder
@@ -214,9 +231,33 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 		B contextPath(String contextPath);
 
 		/**
+		 * Append the given query parameter to the existing query parameters.
+		 * If no values are given, the resulting URI will contain the query
+		 * parameter name only (i.e. {@code ?foo} instead of {@code ?foo=bar}).
+		 * <p>The provided query name and values will be encoded.
+		 * @param name the query parameter name
+		 * @param values the query parameter values
+		 * @return this UriComponentsBuilder
+		 */
+		B queryParam(String name, Object... values);
+
+		/**
+		 * Add the given query parameters and values. The provided query name
+		 * and corresponding values will be encoded.
+		 * @param params the params
+		 * @return this UriComponentsBuilder
+		 */
+		B queryParams(MultiValueMap<String, String> params);
+
+		/**
 		 * Set the remote address to return.
 		 */
 		B remoteAddress(InetSocketAddress remoteAddress);
+
+		/**
+		 * Set SSL session information and certificates.
+		 */
+		void sslInfo(SslInfo sslInfo);
 
 		/**
 		 * Add one or more cookies.
@@ -358,12 +399,17 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 		@Nullable
 		private String contextPath;
 
+		private final UriComponentsBuilder queryParamsBuilder = UriComponentsBuilder.newInstance();
+
 		private final HttpHeaders headers = new HttpHeaders();
 
 		private final MultiValueMap<String, HttpCookie> cookies = new LinkedMultiValueMap<>();
 
 		@Nullable
 		private InetSocketAddress remoteAddress;
+
+		@Nullable
+		private SslInfo sslInfo;
 
 
 		public DefaultBodyBuilder(HttpMethod method, URI url) {
@@ -378,9 +424,26 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 		}
 
 		@Override
+		public BodyBuilder queryParam(String name, Object... values) {
+			this.queryParamsBuilder.queryParam(name, values);
+			return this;
+		}
+
+		@Override
+		public BodyBuilder queryParams(MultiValueMap<String, String> params) {
+			this.queryParamsBuilder.queryParams(params);
+			return this;
+		}
+
+		@Override
 		public BodyBuilder remoteAddress(InetSocketAddress remoteAddress) {
 			this.remoteAddress = remoteAddress;
 			return this;
+		}
+
+		@Override
+		public void sslInfo(SslInfo sslInfo) {
+			this.sslInfo = sslInfo;
 		}
 
 		@Override
@@ -480,14 +543,27 @@ public class MockServerHttpRequest extends AbstractServerHttpRequest {
 
 		@Override
 		public MockServerHttpRequest body(Publisher<? extends DataBuffer> body) {
-			applyCookies();
-			return new MockServerHttpRequest(this.method, this.url, this.contextPath,
-					this.headers, this.cookies, this.remoteAddress, body);
+			applyCookiesIfNecessary();
+			return new MockServerHttpRequest(this.method, getUrlToUse(), this.contextPath,
+					this.headers, this.cookies, this.remoteAddress, this.sslInfo, body);
 		}
 
-		private void applyCookies() {
-			this.cookies.values().stream().flatMap(Collection::stream)
-					.forEach(cookie -> this.headers.add(HttpHeaders.COOKIE, cookie.toString()));
+		private void applyCookiesIfNecessary() {
+			if (this.headers.get(HttpHeaders.COOKIE) == null) {
+				this.cookies.values().stream().flatMap(Collection::stream)
+						.forEach(cookie -> this.headers.add(HttpHeaders.COOKIE, cookie.toString()));
+			}
+		}
+
+		private URI getUrlToUse() {
+			MultiValueMap<String, String> params =
+					this.queryParamsBuilder.buildAndExpand().encode().getQueryParams();
+
+			if (!params.isEmpty()) {
+				return UriComponentsBuilder.fromUri(this.url).queryParams(params).build(true).toUri();
+			}
+
+			return this.url;
 		}
 	}
 

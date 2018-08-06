@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ import org.springframework.core.io.buffer.support.DataBufferTestUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.EncoderHttpMessageWriter;
 import org.springframework.http.codec.HttpMessageWriter;
@@ -56,16 +57,13 @@ import org.springframework.web.reactive.HandlerResult;
 import org.springframework.web.reactive.accept.RequestedContentTypeResolver;
 import org.springframework.web.reactive.accept.RequestedContentTypeResolverBuilder;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.springframework.core.ResolvableType.forClassWithGenerics;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
-import static org.springframework.http.ResponseEntity.notFound;
-import static org.springframework.http.ResponseEntity.ok;
-import static org.springframework.mock.http.server.reactive.test.MockServerHttpRequest.get;
-import static org.springframework.web.method.ResolvableMethod.on;
-import static org.springframework.web.reactive.HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE;
+import static org.junit.Assert.*;
+import static org.springframework.core.ResolvableType.*;
+import static org.springframework.http.MediaType.*;
+import static org.springframework.http.ResponseEntity.*;
+import static org.springframework.mock.http.server.reactive.test.MockServerHttpRequest.*;
+import static org.springframework.web.method.ResolvableMethod.*;
+import static org.springframework.web.reactive.HandlerMapping.*;
 
 /**
  * Unit tests for {@link ResponseEntityResultHandler}. When adding a test also
@@ -106,9 +104,7 @@ public class ResponseEntityResultHandlerTests {
 
 
 	@Test
-	@SuppressWarnings("ConstantConditions")
-	public void supports() throws NoSuchMethodException {
-
+	public void supports() throws Exception {
 		Object value = null;
 
 		MethodParameter returnType = on(TestController.class).resolveReturnType(entity(String.class));
@@ -133,9 +129,7 @@ public class ResponseEntityResultHandlerTests {
 	}
 
 	@Test
-	@SuppressWarnings("ConstantConditions")
-	public void doesNotSupport() throws NoSuchMethodException {
-
+	public void doesNotSupport() throws Exception {
 		Object value = null;
 
 		MethodParameter returnType = on(TestController.class).resolveReturnType(String.class);
@@ -259,7 +253,7 @@ public class ResponseEntityResultHandlerTests {
 		assertConditionalResponse(exchange, HttpStatus.NOT_MODIFIED, null, etagValue, Instant.MIN);
 	}
 
-	@Test // SPR-14559
+	@Test  // SPR-14559
 	public void handleReturnValueEtagInvalidIfNoneMatch() throws Exception {
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/path").ifNoneMatch("unquoted"));
 
@@ -313,9 +307,8 @@ public class ResponseEntityResultHandlerTests {
 		assertConditionalResponse(exchange, HttpStatus.OK, "body", newEtag, oneMinAgo);
 	}
 
-	@Test // SPR-14877
+	@Test  // SPR-14877
 	public void handleMonoWithWildcardBodyType() throws Exception {
-
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/path"));
 		exchange.getAttributes().put(PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE, Collections.singleton(APPLICATION_JSON));
 
@@ -328,9 +321,8 @@ public class ResponseEntityResultHandlerTests {
 		assertResponseBody(exchange, "body");
 	}
 
-	@Test // SPR-14877
+	@Test  // SPR-14877
 	public void handleMonoWithWildcardBodyTypeAndNullBody() throws Exception {
-
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/path"));
 		exchange.getAttributes().put(PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE, Collections.singleton(APPLICATION_JSON));
 
@@ -343,9 +335,24 @@ public class ResponseEntityResultHandlerTests {
 		assertResponseBodyIsEmpty(exchange);
 	}
 
+	@Test // SPR-17082
+	public void handleResponseEntityWithExistingResponseHeaders() throws Exception {
+		ResponseEntity<Void> value = ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
+		MethodParameter returnType = on(TestController.class).resolveReturnType(entity(Void.class));
+		HandlerResult result = handlerResult(value, returnType);
+		MockServerWebExchange exchange = MockServerWebExchange.from(get("/path"));
+		exchange.getResponse().getHeaders().setContentType(MediaType.TEXT_PLAIN);
+		this.resultHandler.handleResult(exchange, result).block(Duration.ofSeconds(5));
+
+		assertEquals(HttpStatus.OK, exchange.getResponse().getStatusCode());
+		assertEquals(1, exchange.getResponse().getHeaders().size());
+		assertEquals(MediaType.APPLICATION_JSON, exchange.getResponse().getHeaders().getContentType());
+		assertResponseBodyIsEmpty(exchange);
+	}
+
+
 
 	private void testHandle(Object returnValue, MethodParameter returnType) {
-
 		MockServerWebExchange exchange = MockServerWebExchange.from(get("/path"));
 		HandlerResult result = handlerResult(returnValue, returnType);
 		this.resultHandler.handleResult(exchange, result).block(Duration.ofSeconds(5));
@@ -420,7 +427,6 @@ public class ResponseEntityResultHandlerTests {
 		Flux<?> fluxWildcard() { return null; }
 
 		Object object() { return null; }
-
 	}
 
 }

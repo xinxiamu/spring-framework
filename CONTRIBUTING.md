@@ -1,13 +1,14 @@
-## Contributing  to the Spring Framework
+# Contributing  to the Spring Framework
 
 First off, thank you for taking the time to contribute! :+1: :tada: 
 
-**Table of Contents**
+### Table of Contents
 
 * [Code of Conduct](#code-of-conduct)
 * [How to Contribute](#how-to-contribute)
   * [Discuss](#discuss)
   * [Create a Ticket](#create-a-ticket)
+  * [Ticket Lifecycle](#ticket-lifecycle)
   * [Submit a Pull Request](#submit-a-pull-request)
 * [Build from Source](#build-from-source)
 * [Source Code Style](#source-code-style)
@@ -35,8 +36,15 @@ it helps us to make a decision.
 #### Create a Ticket
 
 Reporting an issue or making a feature request is a great way to contribute. Your feedback
-and the conversations that result from it provide a continuous flow of ideas. However,
-before you do that, please take the time to [research first](#Discuss).
+and the conversations that result from it provide a continuous flow of ideas. 
+
+Before you create a ticket, please take the time to [research first](#discuss).
+
+If creating a ticket after a discussion on StackOverflow, please provide a self-sufficient description in the ticket, independent of the details on StackOverview. We understand this is extra work but the issue tracker is an important place of record for design discussions and decisions that can often be referenced long after the fix version, for example to revisit decisions, to understand the origin of a feature, and so on.
+
+When ready create a ticket in the [JIRA issue tracker](https://jira.spring.io/browse/SPR).
+
+#### Ticket Lifecycle
 
 When an issue is first created, it may not be assigned and will not have a fix version.
 Within a day or two, the issue is assigned to a specific committer and the target
@@ -56,7 +64,7 @@ You can contribute a source code change by submitting a pull request.
 [Contributor License Agreement](https://cla.pivotal.io/sign/spring). You will also be reminded
 automatically when you submit a pull request.
 
-1. For all but the most trivial of contributions, please [create a ticket](#Create-a-Ticket).
+1. For all but the most trivial of contributions, please [create a ticket](#create-a-ticket).
 The purpose of the ticket is to understand and discuss the underlying issue or feature.
 We use the JIRA issue tracker as the preferred place of record for conversations and
 conclusions. In that sense discussions directly under a PR are more implementation detail
@@ -99,10 +107,10 @@ source code into your IDE.
 
 ### Source Code Style
 
-The wiki page
-[Spring Framework Code Style](https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-Code-Style)
-defines the source file coding standards we use while the [IDEA formatting](https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-IDEA-Code-Formatting)
-page describes the changes we make to the default code formatting settings in IntelliJ IDEA.
+The wiki pages
+[Code Style](https://github.com/spring-projects/spring-framework/wiki/Code-Style) and
+[IntelliJ IDEA Editor Settings](https://github.com/spring-projects/spring-framework/wiki/IntelliJ-IDEA-Editor-Settings)
+defines the source file coding standards we use along with some IDEA editor settings we customize.
 
 ### Reference Docs
 

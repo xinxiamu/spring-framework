@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ public class CrossOriginTests {
 
 
 	@Before
+	@SuppressWarnings("resource")
 	public void setup() {
 		StaticWebApplicationContext wac = new StaticWebApplicationContext();
 		Properties props = new Properties();
@@ -126,7 +127,7 @@ public class CrossOriginTests {
 		assertNotNull(config);
 		assertArrayEquals(new String[] {"GET"}, config.getAllowedMethods().toArray());
 		assertArrayEquals(new String[] {"*"}, config.getAllowedOrigins().toArray());
-		assertTrue(config.getAllowCredentials());
+		assertNull(config.getAllowCredentials());
 		assertArrayEquals(new String[] {"*"}, config.getAllowedHeaders().toArray());
 		assertTrue(CollectionUtils.isEmpty(config.getExposedHeaders()));
 		assertEquals(new Long(1800), config.getMaxAge());
@@ -155,7 +156,7 @@ public class CrossOriginTests {
 		CorsConfiguration config = getCorsConfiguration(chain, false);
 		assertNotNull(config);
 		assertEquals(Arrays.asList("http://example.com"), config.getAllowedOrigins());
-		assertTrue(config.getAllowCredentials());
+		assertNull(config.getAllowCredentials());
 	}
 
 	@Test
@@ -166,7 +167,7 @@ public class CrossOriginTests {
 		CorsConfiguration config = getCorsConfiguration(chain, false);
 		assertNotNull(config);
 		assertEquals(Arrays.asList("http://example.com"), config.getAllowedOrigins());
-		assertTrue(config.getAllowCredentials());
+		assertNull(config.getAllowCredentials());
 	}
 
 	@Test
@@ -243,7 +244,7 @@ public class CrossOriginTests {
 		assertNotNull(config);
 		assertArrayEquals(new String[] {"GET"}, config.getAllowedMethods().toArray());
 		assertArrayEquals(new String[] {"*"}, config.getAllowedOrigins().toArray());
-		assertTrue(config.getAllowCredentials());
+		assertNull(config.getAllowCredentials());
 		assertArrayEquals(new String[] {"*"}, config.getAllowedHeaders().toArray());
 		assertTrue(CollectionUtils.isEmpty(config.getExposedHeaders()));
 		assertEquals(new Long(1800), config.getMaxAge());

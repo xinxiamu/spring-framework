@@ -1,13 +1,18 @@
 [[webtestclient]]
 = WebTestClient
 
-`WebTestClient` is a non-blocking, reactive client for testing web servers. It uses
-the reactive <<web-reactive.adoc#webflux-webclient, WebClient>> internally to perform
-requests and provides a fluent API to verify responses. The `WebTestClient` can connect
-to any server over an HTTP connection. It can also bind directly to WebFlux applications
-with <<testing.adoc#mock-objects-web-reactive,mock request and response>> objects,
-without the need for an HTTP server.
+`WebTestClient` is a thin shell around <<web-reactive.adoc#webflux-webclient, WebClient>>,
+using it to perform requests and exposing a dedicated, fluent API for verifying responses.
+`WebTestClient` bind to a WebFlux application using a
+<<testing.adoc#mock-objects-web-reactive,mock request and response>>, or it can test any
+web server over an HTTP connection.
 
+
+[TIP]
+====
+Kotlin users, please see <<languages.adoc#kotlin-webtestclient-issue,this section>>
+related to use of the `WebTestClient`.
+====
 
 
 
@@ -15,8 +20,8 @@ without the need for an HTTP server.
 == Setup
 
 To create a `WebTestClient` you must choose one of several server setup options.
-Effectively you either configure a WebFlux application to bind to, or use absolute URLs
-to connect to a running server.
+Effectively you're either configuring the WebFlux application to bind to, or using
+a URL to connect to a running server.
 
 
 
@@ -28,7 +33,7 @@ Use this server setup to test one `@Controller` at a time:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    client = WebTestClient.bindToController(new TestController()).build();
+	client = WebTestClient.bindToController(new TestController()).build();
 ----
 
 The above loads the <<web-reactive.adoc#webflux-config,WebFlux Java config>> and
@@ -47,8 +52,8 @@ Use this option to set up a server from a
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    RouterFunction<?> route = ...
-    client = WebTestClient.bindToRouterFunction(route).build();
+	RouterFunction<?> route = ...
+	client = WebTestClient.bindToRouterFunction(route).build();
 ----
 
 Internally the provided configuration is passed to `RouterFunctions.toWebHandler`.
@@ -66,21 +71,20 @@ some subset of it:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    @RunWith(SpringRunner.class)
-    @ContextConfiguration(classes = WebConfig.class) // <1>
-    public class MyTests {
-    
-        @Autowired
-        private ApplicationContext context; // <2>
-    
-        private WebTestClient client;
+	@RunWith(SpringRunner.class)
+	@ContextConfiguration(classes = WebConfig.class) // <1>
+	public class MyTests {
 
-        @Before
-        public void setUp() {
-            client = WebTestClient.bindToApplicationContext(context).build(); // <3>
-        }
+		@Autowired
+		private ApplicationContext context; // <2>
 
-    }
+		private WebTestClient client;
+
+		@Before
+		public void setUp() {
+			client = WebTestClient.bindToApplicationContext(context).build(); // <3>
+		}
+	}
 ----
 
 <1> Specify the configuration to load
@@ -103,7 +107,7 @@ This server setup option allows you to connect to a running server:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    client = WebTestClient.bindToServer().baseUrl("http://localhost:8080").build();
+	client = WebTestClient.bindToServer().baseUrl("http://localhost:8080").build();
 ----
 
 
@@ -118,10 +122,10 @@ are readily available following `bindToServer`. For all others, you need to use
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    client = WebTestClient.bindToController(new TestController())
-            .configureClient()
-            .baseUrl("/test")
-            .build();
+	client = WebTestClient.bindToController(new TestController())
+			.configureClient()
+			.baseUrl("/test")
+			.build();
 ----
 
 
@@ -139,12 +143,12 @@ Typically you start by asserting the response status and headers:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    client.get().uri("/persons/1")
-            .accept(MediaType.APPLICATION_JSON_UTF8)
-            .exchange()
-            .expectStatus().isOk()
-            .expectHeader().contentType(MediaType.APPLICATION_JSON_UTF8)
-            // ...
+	client.get().uri("/persons/1")
+			.accept(MediaType.APPLICATION_JSON_UTF8)
+			.exchange()
+			.expectStatus().isOk()
+			.expectHeader().contentType(MediaType.APPLICATION_JSON_UTF8)
+			// ...
 ----
 
 Then you specify how to decode and consume the response body:
@@ -158,32 +162,32 @@ Then you can use built-in assertions for the body. Here is one example:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    client.get().uri("/persons")
-            .exchange()
-            .expectStatus().isOk()
-            .expectBodyList(Person.class).hasSize(3).contains(person);
+	client.get().uri("/persons")
+			.exchange()
+			.expectStatus().isOk()
+			.expectBodyList(Person.class).hasSize(3).contains(person);
 ----
 
 You can go beyond the built-in assertions and create your own:
 
 ----
-    client.get().uri("/persons/1")
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody(Person.class)
-            .consumeWith(result -> {
-                // custom assertions (e.g. AssertJ)...
-            });
+	client.get().uri("/persons/1")
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(Person.class)
+			.consumeWith(result -> {
+				// custom assertions (e.g. AssertJ)...
+			});
 ----
 
 You can also exit the workflow and get a result:
 
 ----
-    EntityExchangeResult<Person> result = client.get().uri("/persons/1")
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody(Person.class)
-            .returnResult();
+	EntityExchangeResult<Person> result = client.get().uri("/persons/1")
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody(Person.class)
+			.returnResult();
 ----
 
 [TIP]
@@ -204,10 +208,10 @@ that resources are released:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    client.get().uri("/persons/123")
-            .exchange()
-            .expectStatus().isNotFound()
-            .expectBody(Void.class);
+	client.get().uri("/persons/123")
+			.exchange()
+			.expectStatus().isNotFound()
+			.expectBody(Void.class);
 ----
 
 Or if you want to assert there is no response content, use this:
@@ -215,11 +219,11 @@ Or if you want to assert there is no response content, use this:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    client.post().uri("/persons")
-            .body(personMono, Person.class)
-            .exchange()
-            .expectStatus().isCreated()
-            .expectBody().isEmpty;
+	client.post().uri("/persons")
+			.body(personMono, Person.class)
+			.exchange()
+			.expectStatus().isCreated()
+			.expectBody().isEmpty();
 ----
 
 
@@ -234,11 +238,11 @@ http://jsonassert.skyscreamer.org[JSONAssert] to verify JSON content:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    client.get().uri("/persons/1")
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody()
-            .json("{\"name\":\"Jane\"}")
+	client.get().uri("/persons/1")
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody()
+			.json("{\"name\":\"Jane\"}")
 ----
 
 You can also use https://github.com/jayway/JsonPath[JSONPath] expressions:
@@ -246,12 +250,12 @@ You can also use https://github.com/jayway/JsonPath[JSONPath] expressions:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    client.get().uri("/persons")
-            .exchange()
-            .expectStatus().isOk()
-            .expectBody()
-            .jsonPath("$[0].name").isEqualTo("Jane")
-            .jsonPath("$[1].name").isEqualTo("Jason");
+	client.get().uri("/persons")
+			.exchange()
+			.expectStatus().isOk()
+			.expectBody()
+			.jsonPath("$[0].name").isEqualTo("Jane")
+			.jsonPath("$[1].name").isEqualTo("Jason");
 ----
 
 
@@ -265,11 +269,11 @@ and header assertions, as shown below:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    FluxExchangeResult<MyEvent> result = client.get().uri("/events")
-            .accept(TEXT_EVENT_STREAM)
-            .exchange()
-            .expectStatus().isOk()
-            .returnResult(MyEvent.class);
+	FluxExchangeResult<MyEvent> result = client.get().uri("/events")
+			.accept(TEXT_EVENT_STREAM)
+			.exchange()
+			.expectStatus().isOk()
+			.returnResult(MyEvent.class);
 
 ----
 
@@ -280,12 +284,22 @@ from the `reactor-test` module to do that, for example:
 [source,java,intent=0]
 [subs="verbatim,quotes"]
 ----
-    Flux<Event> eventFux = result.getResponseBody();
+	Flux<Event> eventFux = result.getResponseBody();
 
-    StepVerifier.create(eventFlux)
-            .expectNext(person)
-            .expectNextCount(4)
-            .consumeNextWith(p -> ...)
-            .thenCancel()
-            .verify();
+	StepVerifier.create(eventFlux)
+			.expectNext(person)
+			.expectNextCount(4)
+			.consumeNextWith(p -> ...)
+			.thenCancel()
+			.verify();
 ----
+
+
+[[webtestclient-request-body]]
+=== Request body
+
+When it comes to building requests, the `WebTestClient` offers an identical API as the
+`WebClient` and the implementation is mostly a simple pass-through. Please refer
+to the <<web-reactive.adoc#webflux-client-body,WebClient documentation>> for examples on
+how to prepare a request with a body including submitting form data, multipart requests,
+and more.

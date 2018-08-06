@@ -62,7 +62,7 @@ however, it would be even more confusing if Spring used its own terminology.
   method or the handling of an exception. In Spring AOP, a join point __always__
   represents a method execution.
 * __Advice__: action taken by an aspect at a particular join point. Different types of
-  advice include "around," "before" and "after" advice. (Advice types are discussed
+  advice include "around", "before" and "after" advice. (Advice types are discussed
   below.) Many AOP frameworks, including Spring, model an advice as an __interceptor__,
   maintaining a chain of interceptors __around__ the join point.
 * __Pointcut__: a predicate that matches join points. Advice is associated with a
@@ -235,7 +235,7 @@ as needed.
 
 The @AspectJ support can be enabled with XML or Java style configuration. In either
 case you will also need to ensure that AspectJ's `aspectjweaver.jar` library is on the
-classpath of your application (version 1.6.8 or later). This library is available in the
+classpath of your application (version 1.8 or later). This library is available in the
 `'lib'` directory of an AspectJ distribution or via the Maven Central repository.
 
 
@@ -1630,7 +1630,7 @@ using the `ref` attribute:
 	</bean>
 ----
 
-The bean backing the aspect (" `aBean`" in this case) can of course be configured and
+The bean backing the aspect (`"aBean"` in this case) can of course be configured and
 dependency injected just like any other Spring bean.
 
 
@@ -1727,12 +1727,12 @@ parameters of the matching names:
 	}
 ----
 
-When combining pointcut sub-expressions, '&&' is awkward within an XML document, and so
-the keywords 'and', 'or' and 'not' can be used in place of '&&', '||' and '!'
+When combining pointcut sub-expressions, `&&` is awkward within an XML document, and so
+the keywords `and`, `or`, and `not` can be used in place of `&&`, `||`, and `!`
 respectively. For example, the previous pointcut may be better written as:
 
 [source,xml,indent=0]
-[subs="verbatim"]
+[subs="verbatim,quotes"]
 ----
 	<aop:config>
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.client.reactive.MockClientHttpRequest;
 import org.springframework.mock.http.client.reactive.MockClientHttpResponse;
 
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link StatusAssertions}.
@@ -38,8 +39,7 @@ import static org.mockito.Mockito.mock;
 public class StatusAssertionTests {
 
 	@Test
-	public void isEqualTo() throws Exception {
-
+	public void isEqualTo() {
 		StatusAssertions assertions = statusAssertions(HttpStatus.CONFLICT);
 
 		// Success
@@ -64,8 +64,7 @@ public class StatusAssertionTests {
 	}
 
 	@Test
-	public void reasonEquals() throws Exception {
-
+	public void reasonEquals() {
 		StatusAssertions assertions = statusAssertions(HttpStatus.CONFLICT);
 
 		// Success
@@ -81,7 +80,7 @@ public class StatusAssertionTests {
 	}
 
 	@Test
-	public void statusSerius1xx() throws Exception {
+	public void statusSerius1xx() {
 		StatusAssertions assertions = statusAssertions(HttpStatus.CONTINUE);
 
 		// Success
@@ -97,7 +96,7 @@ public class StatusAssertionTests {
 	}
 
 	@Test
-	public void statusSerius2xx() throws Exception {
+	public void statusSerius2xx() {
 		StatusAssertions assertions = statusAssertions(HttpStatus.OK);
 
 		// Success
@@ -113,7 +112,7 @@ public class StatusAssertionTests {
 	}
 
 	@Test
-	public void statusSerius3xx() throws Exception {
+	public void statusSerius3xx() {
 		StatusAssertions assertions = statusAssertions(HttpStatus.PERMANENT_REDIRECT);
 
 		// Success
@@ -129,7 +128,7 @@ public class StatusAssertionTests {
 	}
 
 	@Test
-	public void statusSerius4xx() throws Exception {
+	public void statusSerius4xx() {
 		StatusAssertions assertions = statusAssertions(HttpStatus.BAD_REQUEST);
 
 		// Success
@@ -145,7 +144,7 @@ public class StatusAssertionTests {
 	}
 
 	@Test
-	public void statusSerius5xx() throws Exception {
+	public void statusSerius5xx() {
 		StatusAssertions assertions = statusAssertions(HttpStatus.INTERNAL_SERVER_ERROR);
 
 		// Success
@@ -154,6 +153,23 @@ public class StatusAssertionTests {
 		try {
 			assertions.is2xxSuccessful();
 			fail("Wrong series expected");
+		}
+		catch (AssertionError error) {
+			// Expected
+		}
+	}
+
+	@Test
+	public void matches() {
+		StatusAssertions assertions = statusAssertions(HttpStatus.CONFLICT);
+
+		// Success
+		assertions.value(equalTo(409));
+		assertions.value(greaterThan(400));
+
+		try {
+			assertions.value(equalTo(200));
+			fail("Wrong status expected");
 		}
 		catch (AssertionError error) {
 			// Expected

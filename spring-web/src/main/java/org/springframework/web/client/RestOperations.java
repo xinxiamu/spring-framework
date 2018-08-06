@@ -37,7 +37,6 @@ import org.springframework.lang.Nullable;
  * @author Juergen Hoeller
  * @since 3.0
  * @see RestTemplate
- * @see AsyncRestOperations
  */
 public interface RestOperations {
 
@@ -150,6 +149,12 @@ public interface RestOperations {
 	 * <p>URI Template variables are expanded using the given URI variables, if any.
 	 * <p>The {@code request} parameter can be a {@link HttpEntity} in order to
 	 * add additional HTTP headers to the request.
+	 * <p>The body of the entity, or {@code request} itself, can be a
+	 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create a multipart request.
+	 * The values in the {@code MultiValueMap} can be any Object representing the body of the part,
+	 * or an {@link org.springframework.http.HttpEntity HttpEntity} representing a part with body
+	 * and headers. The {@code MultiValueMap} can be built conveniently using
+	 * {@link org.springframework.http.client.MultipartBodyBuilder MultipartBodyBuilder}.
 	 * @param url the URL
 	 * @param request the Object to be POSTed (may be {@code null})
 	 * @param uriVariables the variables to expand the template
@@ -164,7 +169,13 @@ public interface RestOperations {
 	 * the {@code Location} header. This header typically indicates where the new resource is stored.
 	 * <p>URI Template variables are expanded using the given map.
 	 * <p>The {@code request} parameter can be a {@link HttpEntity} in order to
-	 * add additional HTTP headers to the request.
+	 * add additional HTTP headers to the request
+	 * <p>The body of the entity, or {@code request} itself, can be a
+	 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create a multipart request.
+	 * The values in the {@code MultiValueMap} can be any Object representing the body of the part,
+	 * or an {@link org.springframework.http.HttpEntity HttpEntity} representing a part with body
+	 * and headers. The {@code MultiValueMap} can be built conveniently using
+	 * {@link org.springframework.http.client.MultipartBodyBuilder MultipartBodyBuilder}.
 	 * @param url the URL
 	 * @param request the Object to be POSTed (may be {@code null})
 	 * @param uriVariables the variables to expand the template
@@ -180,6 +191,12 @@ public interface RestOperations {
 	 * {@code Location} header. This header typically indicates where the new resource is stored.
 	 * <p>The {@code request} parameter can be a {@link HttpEntity} in order to
 	 * add additional HTTP headers to the request.
+	 * <p>The body of the entity, or {@code request} itself, can be a
+	 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create a multipart request.
+	 * The values in the {@code MultiValueMap} can be any Object representing the body of the part,
+	 * or an {@link org.springframework.http.HttpEntity HttpEntity} representing a part with body
+	 * and headers. The {@code MultiValueMap} can be built conveniently using
+	 * {@link org.springframework.http.client.MultipartBodyBuilder MultipartBodyBuilder}.
 	 * @param url the URL
 	 * @param request the Object to be POSTed (may be {@code null})
 	 * @return the value for the {@code Location} header
@@ -194,6 +211,12 @@ public interface RestOperations {
 	 * <p>URI Template variables are expanded using the given URI variables, if any.
 	 * <p>The {@code request} parameter can be a {@link HttpEntity} in order to
 	 * add additional HTTP headers to the request.
+	 * <p>The body of the entity, or {@code request} itself, can be a
+	 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create a multipart request.
+	 * The values in the {@code MultiValueMap} can be any Object representing the body of the part,
+	 * or an {@link org.springframework.http.HttpEntity HttpEntity} representing a part with body
+	 * and headers. The {@code MultiValueMap} can be built conveniently using
+	 * {@link org.springframework.http.client.MultipartBodyBuilder MultipartBodyBuilder}.
 	 * @param url the URL
 	 * @param request the Object to be POSTed (may be {@code null})
 	 * @param responseType the type of the return value
@@ -211,6 +234,12 @@ public interface RestOperations {
 	 * <p>URI Template variables are expanded using the given map.
 	 * <p>The {@code request} parameter can be a {@link HttpEntity} in order to
 	 * add additional HTTP headers to the request.
+	 * <p>The body of the entity, or {@code request} itself, can be a
+	 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create a multipart request.
+	 * The values in the {@code MultiValueMap} can be any Object representing the body of the part,
+	 * or an {@link org.springframework.http.HttpEntity HttpEntity} representing a part with body
+	 * and headers. The {@code MultiValueMap} can be built conveniently using
+	 * {@link org.springframework.http.client.MultipartBodyBuilder MultipartBodyBuilder}.
 	 * @param url the URL
 	 * @param request the Object to be POSTed (may be {@code null})
 	 * @param responseType the type of the return value
@@ -227,6 +256,12 @@ public interface RestOperations {
 	 * and returns the representation found in the response.
 	 * <p>The {@code request} parameter can be a {@link HttpEntity} in order to
 	 * add additional HTTP headers to the request.
+	 * <p>The body of the entity, or {@code request} itself, can be a
+	 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create a multipart request.
+	 * The values in the {@code MultiValueMap} can be any Object representing the body of the part,
+	 * or an {@link org.springframework.http.HttpEntity HttpEntity} representing a part with body
+	 * and headers. The {@code MultiValueMap} can be built conveniently using
+	 * {@link org.springframework.http.client.MultipartBodyBuilder MultipartBodyBuilder}.
 	 * @param url the URL
 	 * @param request the Object to be POSTed (may be {@code null})
 	 * @param responseType the type of the return value
@@ -242,6 +277,12 @@ public interface RestOperations {
 	 * <p>URI Template variables are expanded using the given URI variables, if any.
 	 * <p>The {@code request} parameter can be a {@link HttpEntity} in order to
 	 * add additional HTTP headers to the request.
+	 * <p>The body of the entity, or {@code request} itself, can be a
+	 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create a multipart request.
+	 * The values in the {@code MultiValueMap} can be any Object representing the body of the part,
+	 * or an {@link org.springframework.http.HttpEntity HttpEntity} representing a part with body
+	 * and headers. The {@code MultiValueMap} can be built conveniently using
+	 * {@link org.springframework.http.client.MultipartBodyBuilder MultipartBodyBuilder}.
 	 * @param url the URL
 	 * @param request the Object to be POSTed (may be {@code null})
 	 * @param uriVariables the variables to expand the template
@@ -258,6 +299,12 @@ public interface RestOperations {
 	 * <p>URI Template variables are expanded using the given map.
 	 * <p>The {@code request} parameter can be a {@link HttpEntity} in order to
 	 * add additional HTTP headers to the request.
+	 * <p>The body of the entity, or {@code request} itself, can be a
+	 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create a multipart request.
+	 * The values in the {@code MultiValueMap} can be any Object representing the body of the part,
+	 * or an {@link org.springframework.http.HttpEntity HttpEntity} representing a part with body
+	 * and headers. The {@code MultiValueMap} can be built conveniently using
+	 * {@link org.springframework.http.client.MultipartBodyBuilder MultipartBodyBuilder}.
 	 * @param url the URL
 	 * @param request the Object to be POSTed (may be {@code null})
 	 * @param uriVariables the variables to expand the template
@@ -273,6 +320,12 @@ public interface RestOperations {
 	 * and returns the response as {@link ResponseEntity}.
 	 * <p>The {@code request} parameter can be a {@link HttpEntity} in order to
 	 * add additional HTTP headers to the request.
+	 * <p>The body of the entity, or {@code request} itself, can be a
+	 * {@link org.springframework.util.MultiValueMap MultiValueMap} to create a multipart request.
+	 * The values in the {@code MultiValueMap} can be any Object representing the body of the part,
+	 * or an {@link org.springframework.http.HttpEntity HttpEntity} representing a part with body
+	 * and headers. The {@code MultiValueMap} can be built conveniently using
+	 * {@link org.springframework.http.client.MultipartBodyBuilder MultipartBodyBuilder}.
 	 * @param url the URL
 	 * @param request the Object to be POSTed (may be {@code null})
 	 * @return the converted object

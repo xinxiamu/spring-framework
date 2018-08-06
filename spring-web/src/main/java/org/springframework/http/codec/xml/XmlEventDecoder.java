@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,14 +47,14 @@ import org.springframework.util.MimeTypeUtils;
 import org.springframework.util.xml.StaxUtils;
 
 /**
- * Decodes a {@link DataBuffer} stream into a stream of {@link XMLEvent}s.
+ * Decodes a {@link DataBuffer} stream into a stream of {@link XMLEvent DataBuffer} stream into a stream of {@link XMLEvents}.
  * That is, given the following XML:
  *
- * <pre>{@code
- * <root>
- *     <child>foo</child>
- *     <child>bar</child>
- * </root>}
+ * <pre>
+ * &lt;root>
+ *     &lt;child&gt;foo&lt;/child&gt;
+ *     &lt;child&gt;bar&lt;/child&gt;
+ * &lt;/root&gt;
  * </pre>
  *
  * this method with result in a flux with the following events:
@@ -97,22 +97,20 @@ public class XmlEventDecoder extends AbstractDecoder<XMLEvent> {
 			@Nullable MimeType mimeType, @Nullable Map<String, Object> hints) {
 
 		Flux<DataBuffer> flux = Flux.from(inputStream);
-		if (useAalto) {
+		if (this.useAalto) {
 			AaltoDataBufferToXmlEvent aaltoMapper = new AaltoDataBufferToXmlEvent();
 			return flux.flatMap(aaltoMapper)
 					.doFinally(signalType -> aaltoMapper.endOfInput());
 		}
 		else {
-			Mono<DataBuffer> singleBuffer = flux.reduce(DataBuffer::write);
+			Mono<DataBuffer> singleBuffer = DataBufferUtils.join(flux);
 			return singleBuffer.
 					flatMapMany(dataBuffer -> {
 						try {
 							InputStream is = dataBuffer.asInputStream();
 							Iterator eventReader = inputFactory.createXMLEventReader(is);
 							return Flux.fromIterable((Iterable<XMLEvent>) () -> eventReader)
-									.doFinally(t -> {
-										DataBufferUtils.release(dataBuffer);
-									});
+									.doFinally(t -> DataBufferUtils.release(dataBuffer));
 						}
 						catch (XMLStreamException ex) {
 							return Mono.error(ex);
@@ -137,15 +135,15 @@ public class XmlEventDecoder extends AbstractDecoder<XMLEvent> {
 		@Override
 		public Publisher<? extends XMLEvent> apply(DataBuffer dataBuffer) {
 			try {
-				streamReader.getInputFeeder().feedInput(dataBuffer.asByteBuffer());
+				this.streamReader.getInputFeeder().feedInput(dataBuffer.asByteBuffer());
 				List<XMLEvent> events = new ArrayList<>();
 				while (true) {
-					if (streamReader.next() == AsyncXMLStreamReader.EVENT_INCOMPLETE) {
+					if (this.streamReader.next() == AsyncXMLStreamReader.EVENT_INCOMPLETE) {
 						// no more events with what currently has been fed to the reader
 						break;
 					}
 					else {
-						XMLEvent event = eventAllocator.allocate(streamReader);
+						XMLEvent event = this.eventAllocator.allocate(this.streamReader);
 						events.add(event);
 						if (event.isEndDocument()) {
 							break;

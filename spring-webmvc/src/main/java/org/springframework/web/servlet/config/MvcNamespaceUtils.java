@@ -41,7 +41,7 @@ import org.springframework.web.util.UrlPathHelper;
  * @author Brian Clozel
  * @since 3.1
  */
-abstract class MvcNamespaceUtils {
+public abstract class MvcNamespaceUtils {
 
 	private static final String BEAN_NAME_URL_HANDLER_MAPPING_BEAN_NAME =
 			BeanNameUrlHandlerMapping.class.getName();
@@ -153,13 +153,13 @@ abstract class MvcNamespaceUtils {
 	 * Registers a {@link SimpleControllerHandlerAdapter} under a well-known
 	 * name unless already registered.
 	 */
-	private static void registerSimpleControllerHandlerAdapter(ParserContext cxt, @Nullable Object source) {
-		if (!cxt.getRegistry().containsBeanDefinition(SIMPLE_CONTROLLER_HANDLER_ADAPTER_BEAN_NAME)) {
+	private static void registerSimpleControllerHandlerAdapter(ParserContext context, @Nullable Object source) {
+		if (!context.getRegistry().containsBeanDefinition(SIMPLE_CONTROLLER_HANDLER_ADAPTER_BEAN_NAME)) {
 			RootBeanDefinition beanDef = new RootBeanDefinition(SimpleControllerHandlerAdapter.class);
 			beanDef.setSource(source);
 			beanDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
-			cxt.getRegistry().registerBeanDefinition(SIMPLE_CONTROLLER_HANDLER_ADAPTER_BEAN_NAME, beanDef);
-			cxt.registerComponent(new BeanComponentDefinition(beanDef, SIMPLE_CONTROLLER_HANDLER_ADAPTER_BEAN_NAME));
+			context.getRegistry().registerBeanDefinition(SIMPLE_CONTROLLER_HANDLER_ADAPTER_BEAN_NAME, beanDef);
+			context.registerComponent(new BeanComponentDefinition(beanDef, SIMPLE_CONTROLLER_HANDLER_ADAPTER_BEAN_NAME));
 		}
 	}
 
@@ -208,7 +208,7 @@ abstract class MvcNamespaceUtils {
 	/**
 	 * Find the {@code ContentNegotiationManager} bean created by or registered
 	 * with the {@code annotation-driven} element.
-	 * @return a bean definition, bean reference, or {@code null}
+	 * @return a bean definition, bean reference, or {@code null} if none defined
 	 */
 	@Nullable
 	public static Object getContentNegotiationManager(ParserContext context) {
@@ -223,6 +223,5 @@ abstract class MvcNamespaceUtils {
 		}
 		return null;
 	}
-
 
 }

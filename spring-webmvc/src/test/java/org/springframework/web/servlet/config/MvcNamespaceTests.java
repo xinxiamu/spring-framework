@@ -20,9 +20,8 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Method;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -47,14 +46,13 @@ import org.junit.Test;
 
 import org.springframework.beans.DirectFieldAccessor;
 import org.springframework.beans.TypeMismatchException;
-import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.Ordered;
 import org.springframework.core.convert.ConversionService;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.format.annotation.DateTimeFormat.ISO;
 import org.springframework.format.annotation.NumberFormat;
@@ -85,7 +83,7 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.async.CallableProcessingInterceptor;
 import org.springframework.web.context.request.async.DeferredResultProcessingInterceptor;
-import org.springframework.web.context.support.GenericWebApplicationContext;
+import org.springframework.web.context.support.XmlWebApplicationContext;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.method.support.CompositeUriComponentsContributor;
@@ -114,8 +112,8 @@ import org.springframework.web.servlet.resource.CachingResourceTransformer;
 import org.springframework.web.servlet.resource.ContentVersionStrategy;
 import org.springframework.web.servlet.resource.CssLinkResourceTransformer;
 import org.springframework.web.servlet.resource.DefaultServletHttpRequestHandler;
+import org.springframework.web.servlet.resource.EncodedResourceResolver;
 import org.springframework.web.servlet.resource.FixedVersionStrategy;
-import org.springframework.web.servlet.resource.GzipResourceResolver;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
 import org.springframework.web.servlet.resource.ResourceResolver;
@@ -142,16 +140,8 @@ import org.springframework.web.servlet.view.tiles3.TilesConfigurer;
 import org.springframework.web.servlet.view.tiles3.TilesViewResolver;
 import org.springframework.web.util.UrlPathHelper;
 
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
 /**
  * Tests loading actual MVC namespace configuration.
@@ -170,7 +160,7 @@ public class MvcNamespaceTests {
 			"org.springframework.web.servlet.config.viewControllerHandlerMapping";
 
 
-	private GenericWebApplicationContext appContext;
+	private XmlWebApplicationContext appContext;
 
 	private TestController handler;
 
@@ -180,7 +170,7 @@ public class MvcNamespaceTests {
 	@Before
 	public void setUp() throws Exception {
 		TestMockServletContext servletContext = new TestMockServletContext();
-		appContext = new GenericWebApplicationContext();
+		appContext = new XmlWebApplicationContext();
 		appContext.setServletContext(servletContext);
 		LocaleContextHolder.setLocale(Locale.US);
 
@@ -349,6 +339,7 @@ public class MvcNamespaceTests {
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	public void testResources() throws Exception {
 		loadBeanDefinitions("mvc-config-resources.xml");
 
@@ -418,9 +409,11 @@ public class MvcNamespaceTests {
 		SimpleUrlHandlerMapping mapping = appContext.getBean(SimpleUrlHandlerMapping.class);
 		assertNotNull(mapping);
 		assertNotNull(mapping.getUrlMap().get("/resources/**"));
-		ResourceHttpRequestHandler handler = appContext.getBean((String) mapping.getUrlMap().get("/resources/**"),
-				ResourceHttpRequestHandler.class);
+		String beanName = (String) mapping.getUrlMap().get("/resources/**");
+		ResourceHttpRequestHandler handler = appContext.getBean(beanName, ResourceHttpRequestHandler.class);
 		assertNotNull(handler);
+
+		assertNotNull(handler.getUrlPathHelper());
 
 		List<ResourceResolver> resolvers = handler.getResourceResolvers();
 		assertThat(resolvers, Matchers.hasSize(4));
@@ -438,6 +431,11 @@ public class MvcNamespaceTests {
 				Matchers.instanceOf(FixedVersionStrategy.class));
 		assertThat(versionResolver.getStrategyMap().get("/**"),
 				Matchers.instanceOf(ContentVersionStrategy.class));
+
+		PathResourceResolver pathResolver = (PathResourceResolver) resolvers.get(3);
+		Map<Resource, Charset> locationCharsets = pathResolver.getLocationCharsets();
+		assertEquals(1, locationCharsets.size());
+		assertEquals(StandardCharsets.ISO_8859_1, locationCharsets.values().iterator().next());
 
 		List<ResourceTransformer> transformers = handler.getResourceTransformers();
 		assertThat(transformers, Matchers.hasSize(3));
@@ -468,7 +466,7 @@ public class MvcNamespaceTests {
 		List<ResourceResolver> resolvers = handler.getResourceResolvers();
 		assertThat(resolvers, Matchers.hasSize(3));
 		assertThat(resolvers.get(0), Matchers.instanceOf(VersionResourceResolver.class));
-		assertThat(resolvers.get(1), Matchers.instanceOf(GzipResourceResolver.class));
+		assertThat(resolvers.get(1), Matchers.instanceOf(EncodedResourceResolver.class));
 		assertThat(resolvers.get(2), Matchers.instanceOf(PathResourceResolver.class));
 
 		VersionResourceResolver versionResolver = (VersionResourceResolver) resolvers.get(0);
@@ -898,7 +896,7 @@ public class MvcNamespaceTests {
 			assertArrayEquals(new String[]{"GET", "HEAD", "POST"}, config.getAllowedMethods().toArray());
 			assertArrayEquals(new String[]{"*"}, config.getAllowedHeaders().toArray());
 			assertNull(config.getExposedHeaders());
-			assertTrue(config.getAllowCredentials());
+			assertNull(config.getAllowCredentials());
 			assertEquals(Long.valueOf(1800), config.getMaxAge());
 		}
 	}
@@ -928,18 +926,15 @@ public class MvcNamespaceTests {
 			assertArrayEquals(new String[]{"GET", "HEAD", "POST"}, config.getAllowedMethods().toArray());
 			assertArrayEquals(new String[]{"*"}, config.getAllowedHeaders().toArray());
 			assertNull(config.getExposedHeaders());
-			assertTrue(config.getAllowCredentials());
+			assertNull(config.getAllowCredentials());
 			assertEquals(Long.valueOf(1800), config.getMaxAge());
 		}
 	}
 
 
 	private void loadBeanDefinitions(String fileName) {
-		XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(appContext);
-		ClassPathResource resource = new ClassPathResource(fileName, AnnotationDrivenBeanDefinitionParserTests.class);
-		reader.loadBeanDefinitions(resource);
-		String names = Arrays.toString(this.appContext.getBeanDefinitionNames());
-		appContext.refresh();
+		this.appContext.setConfigLocation("classpath:org/springframework/web/servlet/config/" + fileName);
+		this.appContext.refresh();
 	}
 
 

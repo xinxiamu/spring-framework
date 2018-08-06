@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
@@ -36,9 +35,9 @@ import org.junit.rules.ExpectedException;
 
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.subpackage.NonPublicAnnotatedClass;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.ReflectionUtils;
 
 import static java.util.Arrays.*;
 import static java.util.stream.Collectors.*;
@@ -63,23 +62,8 @@ public class AnnotationUtilsTests {
 
 
 	@Before
-	public void clearCachesBeforeTests() {
-		clearCaches();
-	}
-
-	static void clearCaches() {
-		clearCache("findAnnotationCache", "annotatedInterfaceCache", "metaPresentCache", "synthesizableCache",
-				"attributeAliasesCache", "attributeMethodsCache", "aliasDescriptorCache");
-	}
-
-	static void clearCache(String... cacheNames) {
-		stream(cacheNames).forEach(cacheName -> getCache(cacheName).clear());
-	}
-
-	static Map<?, ?> getCache(String cacheName) {
-		Field field = ReflectionUtils.findField(AnnotationUtils.class, cacheName);
-		ReflectionUtils.makeAccessible(field);
-		return (Map<?, ?>) ReflectionUtils.getField(field, null);
+	public void clearCacheBeforeTests() {
+		AnnotationUtils.clearCache();
 	}
 
 
@@ -194,6 +178,13 @@ public class AnnotationUtilsTests {
 		assertNotNull(order);
 	}
 
+	@Test  // SPR-16060
+	public void findMethodAnnotationFromGenericInterface() throws Exception {
+		Method method = ImplementsInterfaceWithGenericAnnotatedMethod.class.getMethod("foo", String.class);
+		Order order = findAnnotation(method, Order.class);
+		assertNotNull(order);
+	}
+
 	@Test
 	public void findMethodAnnotationFromInterfaceOnSuper() throws Exception {
 		Method method = SubOfImplementsInterfaceWithAnnotatedMethod.class.getMethod("foo");
@@ -302,7 +293,7 @@ public class AnnotationUtilsTests {
 	}
 
 	@Test
-	public void findAnnotationDeclaringClassForAllScenarios() throws Exception {
+	public void findAnnotationDeclaringClassForAllScenarios() {
 		// no class-level annotation
 		assertNull(findAnnotationDeclaringClass(Transactional.class, NonAnnotatedInterface.class));
 		assertNull(findAnnotationDeclaringClass(Transactional.class, NonAnnotatedClass.class));
@@ -411,7 +402,7 @@ public class AnnotationUtilsTests {
 	}
 
 	@Test
-	public void isAnnotationInheritedForAllScenarios() throws Exception {
+	public void isAnnotationInheritedForAllScenarios() {
 		// no class-level annotation
 		assertFalse(isAnnotationInherited(Transactional.class, NonAnnotatedInterface.class));
 		assertFalse(isAnnotationInherited(Transactional.class, NonAnnotatedClass.class));
@@ -520,7 +511,7 @@ public class AnnotationUtilsTests {
 	}
 
 	@Test
-	public void getDefaultValueFromNonPublicAnnotation() throws Exception {
+	public void getDefaultValueFromNonPublicAnnotation() {
 		Annotation[] declaredAnnotations = NonPublicAnnotatedClass.class.getDeclaredAnnotations();
 		assertEquals(1, declaredAnnotations.length);
 		Annotation annotation = declaredAnnotations[0];
@@ -531,7 +522,7 @@ public class AnnotationUtilsTests {
 	}
 
 	@Test
-	public void getDefaultValueFromAnnotationType() throws Exception {
+	public void getDefaultValueFromAnnotationType() {
 		assertEquals(Ordered.LOWEST_PRECEDENCE, getDefaultValue(Order.class, VALUE));
 		assertEquals(Ordered.LOWEST_PRECEDENCE, getDefaultValue(Order.class));
 	}
@@ -563,7 +554,7 @@ public class AnnotationUtilsTests {
 	}
 
 	@Test
-	public void getRepeatableAnnotationsDeclaredOnClassWithAttributeAliases() throws Exception {
+	public void getRepeatableAnnotationsDeclaredOnClassWithAttributeAliases() {
 		final List<String> expectedLocations = asList("A", "B");
 
 		Set<ContextConfig> annotations = getRepeatableAnnotations(ConfigHierarchyTestCase.class, ContextConfig.class, null);
@@ -727,7 +718,7 @@ public class AnnotationUtilsTests {
 	public void getAttributeOverrideNameFromWrongTargetAnnotation() throws Exception {
 		Method attribute = AliasedComposedContextConfig.class.getDeclaredMethod("xmlConfigFile");
 		assertThat("xmlConfigFile is not an alias for @Component.",
-			getAttributeOverrideName(attribute, Component.class), is(nullValue()));
+				getAttributeOverrideName(attribute, Component.class), is(nullValue()));
 	}
 
 	@Test
@@ -921,7 +912,6 @@ public class AnnotationUtilsTests {
 	public void synthesizeAnnotationWithAttributeAliasWithMirroredAliasForWrongAttribute() throws Exception {
 		AliasForWithMirroredAliasForWrongAttribute annotation =
 				AliasForWithMirroredAliasForWrongAttributeClass.class.getAnnotation(AliasForWithMirroredAliasForWrongAttribute.class);
-
 		exception.expect(AnnotationConfigurationException.class);
 		exception.expectMessage(startsWith("Attribute 'bar' in"));
 		exception.expectMessage(containsString(AliasForWithMirroredAliasForWrongAttribute.class.getName()));
@@ -1029,18 +1019,18 @@ public class AnnotationUtilsTests {
 	@Test
 	public void synthesizeAnnotationWithImplicitAliasesWithImpliedAliasNamesOmitted() throws Exception {
 		assertAnnotationSynthesisWithImplicitAliasesWithImpliedAliasNamesOmitted(
-			ValueImplicitAliasesWithImpliedAliasNamesOmittedContextConfigClass.class, "value");
+				ValueImplicitAliasesWithImpliedAliasNamesOmittedContextConfigClass.class, "value");
 		assertAnnotationSynthesisWithImplicitAliasesWithImpliedAliasNamesOmitted(
-			LocationsImplicitAliasesWithImpliedAliasNamesOmittedContextConfigClass.class, "location");
+				LocationsImplicitAliasesWithImpliedAliasNamesOmittedContextConfigClass.class, "location");
 		assertAnnotationSynthesisWithImplicitAliasesWithImpliedAliasNamesOmitted(
-			XmlFilesImplicitAliasesWithImpliedAliasNamesOmittedContextConfigClass.class, "xmlFile");
+				XmlFilesImplicitAliasesWithImpliedAliasNamesOmittedContextConfigClass.class, "xmlFile");
 	}
 
-	private void assertAnnotationSynthesisWithImplicitAliasesWithImpliedAliasNamesOmitted(Class<?> clazz,
-			String expected) throws Exception {
+	private void assertAnnotationSynthesisWithImplicitAliasesWithImpliedAliasNamesOmitted(
+			Class<?> clazz, String expected) {
 
 		ImplicitAliasesWithImpliedAliasNamesOmittedContextConfig config = clazz.getAnnotation(
-			ImplicitAliasesWithImpliedAliasNamesOmittedContextConfig.class);
+				ImplicitAliasesWithImpliedAliasNamesOmittedContextConfig.class);
 		assertNotNull(config);
 
 		ImplicitAliasesWithImpliedAliasNamesOmittedContextConfig synthesizedConfig = synthesizeAnnotation(config);
@@ -1238,7 +1228,6 @@ public class AnnotationUtilsTests {
 	@Test
 	public void synthesizeAnnotationWithAttributeAliasesWithDifferentValues() throws Exception {
 		ContextConfig contextConfig = synthesizeAnnotation(ContextConfigMismatch.class.getAnnotation(ContextConfig.class));
-
 		exception.expect(AnnotationConfigurationException.class);
 		getValue(contextConfig);
 	}
@@ -1541,6 +1530,13 @@ public class AnnotationUtilsTests {
 		assertArrayEquals(new char[] { 'x', 'y', 'z' }, chars);
 	}
 
+	@Test
+	public void interfaceWithAnnotatedMethods() {
+		assertTrue(AnnotationUtils.getAnnotatedMethodsInBaseType(NonAnnotatedInterface.class).isEmpty());
+		assertFalse(AnnotationUtils.getAnnotatedMethodsInBaseType(AnnotatedInterface.class).isEmpty());
+		assertTrue(AnnotationUtils.getAnnotatedMethodsInBaseType(NullableAnnotatedInterface.class).isEmpty());
+	}
+
 
 	@SafeVarargs
 	static <T> T[] asArray(T... arr) {
@@ -1631,6 +1627,12 @@ public class AnnotationUtilsTests {
 	public interface AnnotatedInterface {
 
 		@Order(0)
+		void fromInterfaceImplementedByRoot();
+	}
+
+	public interface NullableAnnotatedInterface {
+
+		@Nullable
 		void fromInterfaceImplementedByRoot();
 	}
 
@@ -1753,6 +1755,18 @@ public class AnnotationUtilsTests {
 	}
 
 	public static class SubTransactionalAndOrderedClass extends TransactionalAndOrderedClass {
+	}
+
+	public interface InterfaceWithGenericAnnotatedMethod<T> {
+
+		@Order
+		void foo(T t);
+	}
+
+	public static class ImplementsInterfaceWithGenericAnnotatedMethod implements InterfaceWithGenericAnnotatedMethod<String> {
+
+		public void foo(String t) {
+		}
 	}
 
 	public interface InterfaceWithAnnotatedMethod {

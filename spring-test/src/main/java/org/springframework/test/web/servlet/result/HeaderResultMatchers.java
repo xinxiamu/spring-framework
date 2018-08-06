@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,9 @@ import org.hamcrest.Matcher;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.ResultMatcher;
 
-import static org.hamcrest.MatcherAssert.*;
-import static org.springframework.test.util.AssertionErrors.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.springframework.test.util.AssertionErrors.assertEquals;
+import static org.springframework.test.util.AssertionErrors.assertTrue;
 
 /**
  * Factory for response header assertions.
@@ -91,6 +92,15 @@ public class HeaderResultMatchers {
 	}
 
 	/**
+	 * Assert that the named response header exists.
+	 * @since 5.0.3
+	 */
+	public ResultMatcher exists(final String name) {
+		return result -> assertTrue("Response should contain header '" + name + "'",
+				result.getResponse().containsHeader(name));
+	}
+
+	/**
 	 * Assert that the named response header does not exist.
 	 * @since 4.0
 	 */
@@ -122,8 +132,8 @@ public class HeaderResultMatchers {
 	 * <p>The {@link ResultMatcher} returned by this method throws an
 	 * {@link AssertionError} if the response does not contain the specified
 	 * header, or if the supplied {@code value} does not match the primary value.
-	 * @see <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">Section 7.1.1.1 of RFC 7231</a>
 	 * @since 4.2
+	 * @see <a href="https://tools.ietf.org/html/rfc7231#section-7.1.1.1">Section 7.1.1.1 of RFC 7231</a>
 	 */
 	public ResultMatcher dateValue(final String name, final long value) {
 		return result -> {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2017 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.ResolvableType;
-import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.codec.Hints;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpInputMessage;
@@ -47,12 +47,17 @@ import org.springframework.util.StringUtils;
  * @author Rossen Stoyanchev
  * @since 5.0
  */
-public class FormHttpMessageReader implements HttpMessageReader<MultiValueMap<String, String>> {
+public class FormHttpMessageReader extends LoggingCodecSupport
+		implements HttpMessageReader<MultiValueMap<String, String>> {
 
+	/**
+	 * The default charset used by the reader.
+	 */
 	public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
 	private static final ResolvableType MULTIVALUE_TYPE =
 			ResolvableType.forClassWithGenerics(MultiValueMap.class, String.class, String.class);
+
 
 	private Charset defaultCharset = DEFAULT_CHARSET;
 
@@ -79,7 +84,7 @@ public class FormHttpMessageReader implements HttpMessageReader<MultiValueMap<St
 	public boolean canRead(ResolvableType elementType, @Nullable MediaType mediaType) {
 		return ((MULTIVALUE_TYPE.isAssignableFrom(elementType) ||
 				(elementType.hasUnresolvableGenerics() &&
-						MultiValueMap.class.isAssignableFrom(elementType.resolve(Object.class)))) &&
+						MultiValueMap.class.isAssignableFrom(elementType.toClass()))) &&
 				(mediaType == null || MediaType.APPLICATION_FORM_URLENCODED.isCompatibleWith(mediaType)));
 	}
 
@@ -97,13 +102,18 @@ public class FormHttpMessageReader implements HttpMessageReader<MultiValueMap<St
 		MediaType contentType = message.getHeaders().getContentType();
 		Charset charset = getMediaTypeCharset(contentType);
 
-		return message.getBody()
-				.reduce(DataBuffer::write)
+		return DataBufferUtils.join(message.getBody())
 				.map(buffer -> {
 					CharBuffer charBuffer = charset.decode(buffer.asByteBuffer());
 					String body = charBuffer.toString();
 					DataBufferUtils.release(buffer);
-					return parseFormData(charset, body);
+					MultiValueMap<String, String> formData = parseFormData(charset, body);
+					if (logger.isDebugEnabled()) {
+						String details = isEnableLoggingRequestDetails() ?
+								formData.toString() : "form fields " + formData.keySet() + " (content masked)";
+						logger.debug(Hints.getLogPrefix(hints) + "Read " + details);
+					}
+					return formData;
 				});
 	}
 
